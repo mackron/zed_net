@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////////////////
 //
-// This is a quick and dirty implementation of an echo client/server.
+// This is a quick and dirty implementation of an echo client/server. TCP modification.
 // It isn't written to reflect best practices!
 //
 
@@ -14,28 +14,33 @@
 int run_server(unsigned short port) {
     zed_net_init();
 
-    zed_net_socket_t socket;
-    if (zed_net_udp_socket_open(&socket, port, 0)) {
-        printf("Error: %s\n", zed_net_get_error());
-        return -1;
-    }
+	const char *host;
+	zed_net_address_t remote_addr;
+    zed_net_socket_t socket, remote_socket;
+    zed_net_tcp_socket_open(&socket, port, 0, 1),
     printf("Running echo server on port %d!\n", port);
 
     char buffer[256];
 
-    while (strcmp(buffer, "done") != 0) {
-        zed_net_address_t sender;
+	if (zed_net_tcp_accept(&socket, &remote_socket, &remote_addr)) {
+		printf("Failed to accept connection\n");
+	}
 
-        int bytes_read = zed_net_udp_socket_receive(&socket, &sender, &buffer, sizeof(buffer));
+	host = zed_net_host_to_str(remote_addr.host);
+	printf("Accepted connection from %s:%d\n", host, remote_addr.port);
+
+    while (strcmp(buffer, "done") != 0) {
+        int bytes_read = zed_net_tcp_socket_receive(&remote_socket, &buffer, sizeof(buffer));
         if (bytes_read) {
-            printf("Received %d bytes from %s:%d: %s\n", bytes_read, zed_net_host_to_str(sender.host), sender.port, buffer);
+            printf("Received %d bytes from %s:%d: %s\n", bytes_read, host, remote_addr.port, buffer);
 
             printf("Echoing...\n");
-            zed_net_udp_socket_send(&socket, sender, buffer, sizeof(buffer));
+            zed_net_tcp_socket_send(&remote_socket, buffer, sizeof(buffer));
         }
     }
 
     printf("Done!\n");
+    zed_net_socket_close(&remote_socket);
     zed_net_socket_close(&socket);
     
     zed_net_shutdown();
@@ -47,10 +52,7 @@ int run_client(const char *host, unsigned short port) {
     zed_net_init();
 
     zed_net_socket_t socket;
-    if (zed_net_udp_socket_open(&socket, 0, 0)) {
-        printf("Error: %s\n", zed_net_get_error());
-        return -1;
-    }
+    zed_net_tcp_socket_open(&socket, 0, 0, 0);
 
     zed_net_address_t address;
     if (zed_net_get_address(&address, host, port) != 0) {
@@ -63,6 +65,12 @@ int run_client(const char *host, unsigned short port) {
     }
 
     printf("Running client! Type \"done\" to exit.\n");
+	
+	if (zed_net_tcp_connect(&socket, address)) {
+		printf("Failed to connect to %s:%d\n", host, port);
+		return -1;
+	}
+	printf("Connected to %s:%d\n", host, port);
 
     char buffer[256];
 
@@ -73,13 +81,11 @@ int run_client(const char *host, unsigned short port) {
         buffer[strlen(buffer) - 1] = '\0';
 
         printf("Sending...\n");
-        zed_net_udp_socket_send(&socket, address, buffer, sizeof(buffer));
+        zed_net_tcp_socket_send(&socket, buffer, sizeof(buffer));
 
-        zed_net_address_t sender;
-
-        int bytes_read = zed_net_udp_socket_receive(&socket, &sender, &buffer, sizeof(buffer));
+        int bytes_read = zed_net_tcp_socket_receive(&socket, &buffer, sizeof(buffer));
         if (bytes_read) {
-            printf("Received %d bytes from %s:%d: %s\n", bytes_read, zed_net_host_to_str(sender.host), sender.port, buffer);
+            printf("Received %d bytes from %s:%d: %s\n", bytes_read, host, port, buffer);
         }
     }
     
