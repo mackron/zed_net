@@ -466,18 +466,22 @@ ZED_NET_DEF void zed_net_socket_close(zed_net_socket_t *socket) {
         return;
     }
 
-    if (socket->handle) {
+    if (socket->handle && socket->handle != ZED_NET_INVALID_SOCKET) {
 #ifdef _WIN32
         closesocket(socket->handle);
 #else
         close(socket->handle);
 #endif
+        socket->handle = ZED_NET_INVALID_SOCKET;
     }
 }
 
 ZED_NET_DEF int zed_net_udp_socket_send(zed_net_socket_t *socket, zed_net_address_t destination, const void *data, int size) {
     if (!socket) {
         return zed_net__error("Socket is NULL");
+    }
+    if (socket->handle == ZED_NET_INVALID_SOCKET) {
+        return zed_net__error("Socket is invalid");
     }
 
     struct sockaddr_in address;
@@ -496,6 +500,9 @@ ZED_NET_DEF int zed_net_udp_socket_send(zed_net_socket_t *socket, zed_net_addres
 ZED_NET_DEF int zed_net_udp_socket_receive(zed_net_socket_t *socket, zed_net_address_t *sender, void *data, int size) {
     if (!socket) {
         return zed_net__error("Socket is NULL");
+    }
+    if (socket->handle == ZED_NET_INVALID_SOCKET) {
+        return zed_net__error("Socket is invalid");
     }
 
 #ifdef _WIN32
