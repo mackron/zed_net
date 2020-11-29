@@ -96,7 +96,7 @@ ZED_NET_DEF const char *zed_net_host_to_str(unsigned int host);
 
 // Wraps the system handle for a UDP/TCP socket
 typedef struct {
-    unsigned int handle;
+    size_t handle;  /* Needs to be the size of a pointer. */
     unsigned long non_blocking;
     int ready;
 } zed_net_socket_t;
@@ -429,7 +429,8 @@ ZED_NET_DEF int zed_net_tcp_connect(zed_net_socket_t *socket, zed_net_address_t 
 
 ZED_NET_DEF int zed_net_tcp_accept(zed_net_socket_t *listening_socket, zed_net_socket_t *remote_socket, zed_net_address_t *remote_addr) {
     struct sockaddr_in address;
-	int retval, handle;
+	int retval;
+    size_t handle;
 
     if (!listening_socket)
         return zed_net__error("Listening socket is NULL");
