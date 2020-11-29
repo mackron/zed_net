@@ -189,7 +189,9 @@ ZED_NET_DEF int zed_net_tcp_make_socket_ready(zed_net_socket_t *socket);
 #ifdef ZED_NET_IGNORE_DEPRECATION_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS // This "fix" prevents deprecated warnings!
 #endif
-#include <windows.h>
+#ifndef ZED_NET_NO_INCLUDE_WINSOCK2_H
+#include <WinSock2.h>
+#endif
 #pragma comment(lib, "wsock32.lib")
 #define ZED_NET_SOCKET_ERROR SOCKET_ERROR
 #define ZED_NET_INVALID_SOCKET INVALID_SOCKET
